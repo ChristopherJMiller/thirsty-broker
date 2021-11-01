@@ -1,9 +1,37 @@
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+
+#[macro_use] 
+extern crate rocket;
+
 use rumqtt::{MqttClient, MqttOptions, QoS, Notification};
 use std::{thread, time::Duration};
 use thirsty_support::{ControllerMessage, ProbePort};
 use std::str;
 
-fn main() {
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
+use dotenv::dotenv;
+use std::env;
+
+pub mod schema;
+pub mod models;
+
+#[get("/")]
+fn index() -> &'static str {
+  "Hello, world!"
+}
+
+#[launch]
+fn rocket() -> _ {
+  dotenv().ok();
+
+  let database_url = env::var("DATABASE_URL")
+    .expect("DATABASE_URL must be set");
+  PgConnection::establish(&database_url)
+    .expect(&format!("Error connecting to {}", database_url));
+
   let mqtt_options = MqttOptions::new("thisty-broker", "localhost", 1883);
   let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).unwrap();
     
@@ -30,4 +58,6 @@ fn main() {
       _ => {}
     }
   }
+
+  rocket::build().mount("/", routes![index])
 }

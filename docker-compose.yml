@@ -1,0 +1,10 @@
+services:
+  mqtt:
+    network_mode: "host"
+    image: docker.io/eclipse-mosquitto:2
+  db:
+    network_mode: "host"
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: password
+    

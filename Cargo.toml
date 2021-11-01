@@ -9,3 +9,4 @@ rumqtt = "0.31.0"
 serde_json = "1"
 diesel = { version = "1.4", features = ["postgres"] }
 dotenv = "0.15"
+rocket = "0.5.0-rc.1"
