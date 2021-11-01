@@ -1,0 +1,11 @@
+[package]
+name = "thirsty-broker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thirsty-support = { git = "https://github.com/ChristopherJMiller/thirsty-support.git" }
+rumqtt = "0.31.0"
+serde_json = "1"
+diesel = { version = "1.4", features = ["postgres"] }
+dotenv = "0.15"
