@@ -5,5 +5,6 @@ table! {
         nickname -> Text,
         dry_reading -> Nullable<Int4>,
         wet_reading -> Nullable<Int4>,
+        current_reading -> Nullable<Int4>,
     }
 }
