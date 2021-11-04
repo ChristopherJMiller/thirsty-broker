@@ -1,4 +1,4 @@
-FROM docker.io/rust:1.56-alpine3.13 as BUILDER
+FROM docker.io/rust:1.56 as BUILDER
 
 WORKDIR /app
 
