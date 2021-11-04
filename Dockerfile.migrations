@@ -1,4 +1,4 @@
-FROM docker.io/rust:1.56.1-alpine3.13
+FROM docker.io/rust:1.56.1-alpine3.13 as BUILDER
 
 WORKDIR /app
 
@@ -6,6 +6,12 @@ RUN apk add musl-dev libc-dev postgresql-dev
 
 RUN cargo install diesel_cli --no-default-features --features "postgres"
 
+FROM gcr.io/distroless/cc
+
+WORKDIR /app
+
 ADD migrations/ /app/migrations/
 
-CMD ["diesel", "migration", "run"]
+COPY --from=BUILDER /usr/local/cargo/bin/diesel .
+
+CMD ["/app/diesel", "migration", "run"]
