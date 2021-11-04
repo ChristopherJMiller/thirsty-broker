@@ -53,7 +53,7 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
-          file: "{context}/Dockerfile.broker"
+          file: Dockerfile.broker
           labels: ${{ steps.meta.outputs.labels }}
           
       - name: Build and push Docker image (Relay)
@@ -61,7 +61,7 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          file: "{context}/Dockerfile.relay"
+          file: Dockerfile.relay
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}-relay
           
@@ -71,6 +71,6 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          file: "{context}/Dockerfile.migrations"
+          file: Dockerfile.migrations
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}-migrations
