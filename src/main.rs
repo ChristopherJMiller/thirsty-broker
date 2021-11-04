@@ -2,26 +2,27 @@
 extern crate diesel;
 extern crate dotenv;
 
-#[macro_use] 
+#[macro_use]
 extern crate rocket;
 
+use std::sync::Mutex;
+use std::{env, thread};
+
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use dotenv::dotenv;
 use lazy_static::lazy_static;
 use models::{Sensor, SensorUpdateJSON, UpdateSensor};
-use std::sync::Mutex;
-use std::thread;
-use serde::Deserialize;
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use dotenv::dotenv;
-use std::env;
-use crate::mqtt::run_mqtt;
+use prometheus::{Encoder, GaugeVec, Opts, Registry, TextEncoder};
 use rocket::serde::json::Json;
-use crate::schema::sensor::dsl::{sensor, dry_reading, wet_reading};
-use prometheus::{Opts, Registry, GaugeVec, TextEncoder, Encoder};
+use rocket_cors::CorsOptions;
 
-pub mod schema;
+use crate::mqtt::run_mqtt;
+use crate::schema::sensor::dsl::{dry_reading, sensor, wet_reading};
+
 pub mod models;
 pub mod mqtt;
+pub mod schema;
 
 lazy_static! {
   static ref PSQL_CONN: Mutex<Option<PgConnection>> = Mutex::new(None);
@@ -34,7 +35,10 @@ fn no_features() -> &'static str {
 
 #[get("/")]
 fn get_sensors() -> Json<Vec<Sensor>> {
-  let sensors = sensor.select(sensor.default_selection()).load::<Sensor>(PSQL_CONN.lock().unwrap().as_ref().unwrap()).unwrap();
+  let sensors = sensor
+    .select(sensor.default_selection())
+    .load::<Sensor>(PSQL_CONN.lock().unwrap().as_ref().unwrap())
+    .unwrap();
   Json(sensors)
 }
 
@@ -43,14 +47,18 @@ fn update_sensor(sensor_json: Json<SensorUpdateJSON>) -> Json<Sensor> {
   let changeset: UpdateSensor = sensor_json.clone().into();
   let result = diesel::update(sensor.find(sensor_json.id))
     .set(&changeset)
-    .get_result::<Sensor>(PSQL_CONN.lock().unwrap().as_ref().unwrap()).unwrap();
+    .get_result::<Sensor>(PSQL_CONN.lock().unwrap().as_ref().unwrap())
+    .unwrap();
 
   Json(result)
 }
 
 #[get("/metrics")]
 fn get_metrics() -> String {
-  let sensors = sensor.filter(dry_reading.is_not_null()).load::<Sensor>(PSQL_CONN.lock().unwrap().as_ref().unwrap()).unwrap();
+  let sensors = sensor
+    .filter(dry_reading.is_not_null())
+    .load::<Sensor>(PSQL_CONN.lock().unwrap().as_ref().unwrap())
+    .unwrap();
   let sensor_names: Vec<&str> = sensors.iter().map(|x| x.sensor_id.as_str()).collect();
 
   let opts = Opts::new("Sensors", "Adjusted Values from the Sensor Readings");
@@ -58,7 +66,7 @@ fn get_metrics() -> String {
 
   let r = Registry::new();
   r.register(Box::new(gauge.clone())).unwrap();
-  
+
   for s in sensors.iter() {
     if let Some(value) = s.current_reading {
       gauge.with_label_values(&[s.sensor_id.as_str()]).set(value.into());
@@ -74,8 +82,7 @@ fn get_metrics() -> String {
 }
 
 fn load_psql(database_url: String) {
-  let conn = PgConnection::establish(&database_url)
-    .expect(&format!("Error connecting to {}", database_url));
+  let conn = PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
 
   *PSQL_CONN.lock().unwrap() = Some(conn);
 }
@@ -103,6 +110,7 @@ async fn main() {
     routes![no_features]
   };
 
-  let _ = rocket::build().mount("/", routes).launch().await;
-}
+  let cors = CorsOptions::default().to_cors().unwrap();
 
+  let _ = rocket::build().mount("/", routes).attach(cors).launch().await;
+}

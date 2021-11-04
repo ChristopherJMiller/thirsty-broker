@@ -1,12 +1,15 @@
 extern crate diesel;
 
+use std::str;
+use std::sync::Mutex;
+
 use diesel::PgConnection;
 use rumqtt::{MqttClient, MqttOptions, Notification, QoS};
 use thirsty_support::ControllerMessage;
-use std::{str, sync::Mutex};
-use crate::models::{NewSensor, Sensor};
-use crate::schema::sensor::dsl::{sensor, sensor_id, current_reading};
+
 use self::diesel::prelude::*;
+use crate::models::{NewSensor, Sensor};
+use crate::schema::sensor::dsl::{current_reading, sensor, sensor_id};
 
 fn get_sensor_id(message: &ControllerMessage) -> String {
   let probe: String = message.probe.into();
@@ -14,7 +17,6 @@ fn get_sensor_id(message: &ControllerMessage) -> String {
 }
 
 pub fn run_mqtt(mqtt_url: String, conn: &Mutex<Option<PgConnection>>) {
-
   let mqtt_options = MqttOptions::new("thirsty-broker", mqtt_url, 1883);
   let (mut mqtt_client, notifications) = MqttClient::start(mqtt_options).unwrap();
 
@@ -26,7 +28,8 @@ pub fn run_mqtt(mqtt_url: String, conn: &Mutex<Option<PgConnection>>) {
           let message: ControllerMessage = serde_json::from_str(&str::from_utf8(&publish.payload).unwrap()).unwrap();
           println!("Message Received: {:?}", message);
           let sensor_id_string = get_sensor_id(&message);
-          let existing_sensor = sensor.filter(sensor_id.eq(sensor_id_string.clone()))
+          let existing_sensor = sensor
+            .filter(sensor_id.eq(sensor_id_string.clone()))
             .load::<Sensor>(conn.as_ref().unwrap())
             .expect("Failed to get sensors. DB down?");
 
@@ -35,7 +38,7 @@ pub fn run_mqtt(mqtt_url: String, conn: &Mutex<Option<PgConnection>>) {
             let new_sensor = NewSensor {
               sensor_id: sensor_id_string.as_str(),
               nickname: sensor_id_string.as_str(),
-              current_reading: i32::from(message.value as u16)
+              current_reading: i32::from(message.value as u16),
             };
 
             diesel::insert_into(crate::schema::sensor::table)
@@ -49,9 +52,8 @@ pub fn run_mqtt(mqtt_url: String, conn: &Mutex<Option<PgConnection>>) {
               .expect("Unable to update sensor reading");
           }
         }
-
-      }
-      _ => {}
+      },
+      _ => {},
     }
   }
 }
