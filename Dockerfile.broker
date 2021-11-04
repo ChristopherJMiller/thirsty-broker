@@ -2,7 +2,7 @@ FROM docker.io/rust:1.56 as BUILDER
 
 WORKDIR /app
 
-RUN apk add musl-dev libc-dev postgresql-dev
+RUN apt-get update && apt-get install -y libpq-dev
 RUN rustup default nightly
 
 ADD . .
