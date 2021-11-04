@@ -1,0 +1,18 @@
+FROM docker.io/rust:1.56-alpine3.13 as BUILDER
+
+WORKDIR /app
+
+RUN apk add musl-dev libc-dev postgresql-dev
+RUN rustup default nightly
+
+ADD . .
+
+RUN --mount=type=cache,target=/app/target cargo build --release && cp /app/target/release/thirsty-broker /app/thirsty-broker
+
+FROM gcr.io/distroless/cc
+
+WORKDIR /app
+
+COPY --from=BUILDER /app/thirsty-broker .
+
+CMD ["/app/thirsty-broker"]
