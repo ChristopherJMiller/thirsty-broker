@@ -1,15 +1,17 @@
-FROM docker.io/rust:1.56-alpine3.13 as BUILDER
+FROM docker.io/rust:1.56 as BUILDER
 
 WORKDIR /app
 
-RUN apk add musl-dev libc-dev postgresql-dev
+RUN apt-get update && apt-get install -y libpq-dev
 RUN rustup default nightly
 
 ADD . .
 
 RUN --mount=type=cache,target=/app/target cargo build --release && cp /app/target/release/thirsty-broker /app/thirsty-broker
 
-FROM gcr.io/distroless/cc
+FROM docker.io/debian:11-slim
+
+RUN apt-get update && apt-get install -y libpq5
 
 WORKDIR /app
 
